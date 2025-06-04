@@ -5,7 +5,9 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
-DATA_PATH = "d:\\ΔΙπλωματική\\data_2.json"
+#DATA_PATH = "d:\\ΔΙπλωματική\\data_2.json"
+
+DATA_PATH = "E:\\ΔΙπλωματική\\data_2.json"
 
 def load_data(data_path):
     """Loads training dataset from json file.
@@ -34,9 +36,6 @@ def load_data(data_path):
 
 def plot_history(history):
     """Plots accuracy/loss for training/validation set as a function of the epochs
-
-        :param history: Training history of model
-        :return:
     """
 
     fig, axs = plt.subplots(2)
@@ -77,32 +76,31 @@ def prepare_datasets(test_size, validation_size):
     X, y = load_data(DATA_PATH)
 
     # create train, validation and test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
-    X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train, test_size=validation_size)
-
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0 , test_size=test_size, stratify=y)
+    X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train,  random_state=0 , test_size=validation_size, stratify=y_train)
+    # can also  use print(X_validation) for centainty
     return X_train, X_validation, X_test, y_train, y_validation, y_test
 
 
 def build_model(input_shape):
     """Generates RNN-LSTM model
 
-    :param input_shape (tuple): Shape of input set
-    :return model: RNN-LSTM model
+    input_shape: Shape of input set
     """
 
-    # build network topology
+    
     model = tf.keras.Sequential() 
 
     # 2 LSTM layers
-    model.add(tf.keras.layers.LSTM(64, input_shape=input_shape, return_sequences=True))
-    model.add(tf.keras.layers.LSTM(64))
-
+    model.add(tf.keras.layers.LSTM(130, input_shape=input_shape, return_sequences=True))
+    model.add(tf.keras.layers.LSTM(130, return_sequences=True))
+    model.add(tf.keras.layers.LSTM(130))
     # dense layer
-    model.add(tf.keras.layers.Dense(64, activation='relu'))
-    model.add(tf.keras.layers.Dropout(0.3))
+    model.add(tf.keras.layers.Dense(130, activation='relu'))
+    # can also use model.add(tf.keras.layers.Dropout(0.3))
 
     # output layer
-    model.add(tf.keras.layers.Dense(10, activation='softmax'))
+    model.add(tf.keras.layers.Dense(3, activation='softmax'))
 
     return model
 
@@ -113,7 +111,7 @@ if __name__ == "__main__":
     X_train, X_validation, X_test, y_train, y_validation, y_test = prepare_datasets(0.25, 0.2)
 
     # create network
-    input_shape = (X_train.shape[1], X_train.shape[2]) # 130, 13
+    input_shape = (X_train.shape[1], X_train.shape[2]) # example 126, 13+128=141  two numbers that show time steps and feature number per time step
     model = build_model(input_shape)
 
     # compile model
@@ -125,11 +123,14 @@ if __name__ == "__main__":
     model.summary()
 
     # train model
-    history = model.fit(X_train, y_train, validation_data=(X_validation, y_validation), batch_size=32, epochs=30)
-
+    history = model.fit(X_train, y_train, validation_data=(X_validation, y_validation), batch_size=32, epochs=50)
+    mean_train_acc = np.mean(history.history['accuracy'])
+    mean_val_acc = np.mean(history.history['val_accuracy'])
+    print(f"Mean Training Accuracy: {mean_train_acc:.4f}, Mean Validation Accuracy: {mean_val_acc:.4f}")
+    
     # plot accuracy/error for training and validation
     plot_history(history)
-
+    
     # evaluate model on test set
     test_loss, test_acc = model.evaluate(X_test, y_test, verbose=2)
-    print('\nTest accuracy:', test_acc)
+    print(f"\nTest accuracy: {test_acc:.4f} ")
